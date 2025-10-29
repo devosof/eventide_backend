@@ -6,6 +6,10 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { EventsModule } from './events/events.module';
+import { TicketsModule } from './tickets/tickets.module';
+import { BookingsModule } from './bookings/bookings.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { CategoriesModule } from './categories/categories.module';
 import dbConfig from './config/dbConfig';
 
 
@@ -18,11 +22,16 @@ import dbConfig from './config/dbConfig';
     }),
     TypeOrmModule.forRootAsync({
       useFactory: dbConfig
-    }), 
-    UsersModule, 
-    AuthModule, EventsModule
+    }),
+    UsersModule,
+    AuthModule, 
+    EventsModule, 
+    TicketsModule, 
+    BookingsModule, 
+    ReviewsModule, 
+    CategoriesModule
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

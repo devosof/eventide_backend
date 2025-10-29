@@ -17,7 +17,6 @@ import { CreateUserDto } from 'src/users/dto/create-user.dto';
 @Injectable()
 export class AuthService {
     constructor(
-        @InjectRepository(User)
         private usersService: UsersService,
         private jwtService: JwtService,
         private config: ConfigService,
@@ -33,6 +32,20 @@ export class AuthService {
         return bcrypt.compare(data, hash);
     }
 
+    private async getTokens(user: User) {
+        const payload = { sub: user.id, email: user.email, role: user.role };
+        const accessToken = await this.jwtService.signAsync(payload, {
+            secret: this.config.get('JWT_ACCESS_TOKEN_SECRET'),
+            expiresIn: this.config.get('JWT_ACCESS_EXPIRES_IN', '15m'),
+        });
+        const refreshToken = await this.jwtService.signAsync(payload, {
+            secret: this.config.get('JWT_REFRESH_TOKEN_SECRET'),
+            expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN', '7d'),
+        });
+        return { accessToken, refreshToken };
+    }
+
+    // for signup
     async register(createUserDto: CreateUserDto) {
         const exists = await this.usersService.findByEmail(createUserDto?.email);
         if (exists) throw new ForbiddenException('Email already used');
@@ -43,7 +56,7 @@ export class AuthService {
         }
     }
 
-
+    // for using local strategy
     async validateLocalUser(email: string, password: string) {
         const user = await this.usersService.findByEmail(email);
         if (!user) throw new UnauthorizedException('User not found!');
@@ -54,6 +67,7 @@ export class AuthService {
         return { id: user.id, name: user.name, role: user.role };
     }
 
+    // for the jwt strategy
     async validateJwtUser(userId: number) {
         const user = await this.usersService.findOne(userId);
         if (!user) throw new UnauthorizedException('User not found!');
@@ -62,6 +76,8 @@ export class AuthService {
     }
 
 
+
+    // user signin 
     async login(email: string, password: string) {
         const user = await this.usersService.findByEmail(email)
         if (!user) throw new UnauthorizedException('Invalid credentials');
@@ -80,7 +96,7 @@ export class AuthService {
 
         return { user: { id: user.id, email: user.email, role: user.role }, ...tokens };
     }
-
+    // user signout
     async logout(userId: number) {
         console.log("User Logged Out")
         await this.usersService.updateHashedRefreshToken(userId, null);
@@ -106,17 +122,6 @@ export class AuthService {
         });
     }
 
-    private async getTokens(user: User) {
-        const payload = { sub: user.id, email: user.email, role: user.role };
-        const accessToken = await this.jwtService.signAsync(payload, {
-            secret: this.config.get('JWT_ACCESS_TOKEN_SECRET'),
-            expiresIn: this.config.get('JWT_ACCESS_EXPIRES_IN', '15m'),
-        });
-        const refreshToken = await this.jwtService.signAsync(payload, {
-            secret: this.config.get('JWT_REFRESH_TOKEN_SECRET'),
-            expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN', '7d'),
-        });
-        return { accessToken, refreshToken };
-    }
+    
 
 }

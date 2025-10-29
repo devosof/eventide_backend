@@ -1,34 +1,51 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { EventsService } from './events.service';
-import { CreateEventDto } from './dto/create-event.dto';
-import { UpdateEventDto } from './dto/update-event.dto';
+import { CreateEventDto, UpdateEventDto, FindEventsDto, EventResponseDto } from './dto/event.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles/roles.guard';
+import { Role } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../entities/user.entity';
+import { GetUser } from '../common/decorators/get-user.decorator';
 
 @Controller('events')
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Post()
-  create(@Body() createEventDto: CreateEventDto) {
-    return this.eventsService.create(createEventDto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.ORGANIZER)
+  create(@Body() dto: CreateEventDto, @GetUser('userId') userId: number): Promise<EventResponseDto> {
+    return this.eventsService.create(dto, userId);
   }
 
   @Get()
-  findAll() {
-    return this.eventsService.findAll();
+  findAll(@Query() dto: FindEventsDto) {
+    return this.eventsService.findAll(dto);
+  }
+
+  @Get('my-events')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.ORGANIZER)
+  getMyEvents(@GetUser('userId') userId: number): Promise<EventResponseDto[]> {
+    return this.eventsService.getMyEvents(userId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.eventsService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<EventResponseDto> {
+    return this.eventsService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto) {
-    return this.eventsService.update(+id, updateEventDto);
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.ORGANIZER)
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateEventDto, @GetUser('userId') userId: number): Promise<EventResponseDto> {
+    return this.eventsService.update(id, dto, userId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.eventsService.remove(+id);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.ORGANIZER)
+  remove(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number): Promise<void> {
+    return this.eventsService.remove(id, userId);
   }
 }
