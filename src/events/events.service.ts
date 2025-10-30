@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Event } from '../entities/event.entity';
@@ -21,40 +21,93 @@ export class EventsService {
   ) {}
 
   async create(dto: CreateEventDto, userId: number): Promise<EventResponseDto> {
-    const organizer = await this.userRepo.findOne({ where: { id: userId } });
-    if (!organizer || organizer.role !== UserRole.ORGANIZER) {
+    if (!userId) throw new BadRequestException('Invalid user ID');
+    if (!dto) throw new BadRequestException('Event data is required');
+
+    const organizer = await this.userRepo.findOne({ 
+      where: { id: userId },
+      relations: ['organizerProfile']
+    });
+    
+    if (!organizer) throw new NotFoundException('User not found');
+    if (organizer.role !== UserRole.ORGANIZER) {
       throw new ForbiddenException('Only organizers can create events');
     }
 
+    // Validate dates
+    const startDate = new Date(dto.startDate);
+    const endDate = new Date(dto.endDate);
     
-    const location = await this.locationRepo.save(this.locationRepo.create(dto.location));
-    const categories = dto.categoryIds ? await this.categoryRepo.findBy({ id: In(dto.categoryIds) }) : [];
-
-    const event = await this.eventRepo.save(
-      this.eventRepo.create({
-        ...dto,
-        startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
-        organizer,
-        location,
-        categories,
-      })
-    );
-
-    if (dto.imageUrls?.length) {
-      await this.imageRepo.save(dto.imageUrls.map(url => this.imageRepo.create({ imageUrl: url, event })));
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new BadRequestException('Invalid date format');
+    }
+    if (startDate >= endDate) {
+      throw new BadRequestException('End date must be after start date');
+    }
+    if (startDate < new Date()) {
+      throw new BadRequestException('Start date must be in the future');
     }
 
-    await this.ticketRepo.save(
-      dto.tickets.map(t => this.ticketRepo.create({
-        ...t,
-        salesStartDate: new Date(t.salesStartDate),
-        salesEndDate: new Date(t.salesEndDate),
-        event,
-      }))
-    );
+    // Validate tickets
+    if (!dto.tickets || dto.tickets.length === 0) {
+      throw new BadRequestException('At least one ticket type is required');
+    }
 
-    return this.findOne(event.id);
+    try {
+      const location = await this.locationRepo.save(this.locationRepo.create(dto.location));
+      
+      let categories: Category[] = [];
+      if (dto.categoryIds && dto.categoryIds.length > 0) {
+        categories = await this.categoryRepo.findBy({ id: In(dto.categoryIds) });
+        if (categories.length !== dto.categoryIds.length) {
+          throw new BadRequestException('One or more categories not found');
+        }
+      }
+
+      const event = await this.eventRepo.save(
+        this.eventRepo.create({
+          name: dto.name,
+          description: dto.description,
+          startDate,
+          endDate,
+          capacity: dto.capacity,
+          organizer,
+          location,
+          categories,
+        })
+      );
+
+      if (dto.imageUrls && dto.imageUrls.length > 0) {
+        const images = dto.imageUrls.map(url => this.imageRepo.create({ imageUrl: url, event }));
+        await this.imageRepo.save(images);
+      }
+
+      const tickets = dto.tickets.map(t => {
+        const salesStart = new Date(t.salesStartDate);
+        const salesEnd = new Date(t.salesEndDate);
+        
+        if (salesStart >= salesEnd) {
+          throw new BadRequestException('Ticket sales end date must be after start date');
+        }
+        
+        return this.ticketRepo.create({
+          name: t.name,
+          price: t.price,
+          salesStartDate: salesStart,
+          salesEndDate: salesEnd,
+          event,
+        });
+      });
+      
+      await this.ticketRepo.save(tickets);
+
+      return this.findOne(event.id);
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to create event');
+    }
   }
 
   async findAll(dto: FindEventsDto) {
