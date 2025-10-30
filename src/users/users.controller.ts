@@ -1,7 +1,9 @@
-import { Controller, Get, Patch, Body, Post, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Post, UseGuards, Req, ValidationPipe, UsePipes } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { CreateOrganizerProfileDto } from './dto/user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -9,19 +11,21 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@Req() req: any) {
-    return this.usersService.getProfile(req.user.userId);
+  getProfile(@GetUser('userId') userId: number) {
+    return this.usersService.getProfile(userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('profile')
-  updateProfile(@Req() req: any, @Body() data: UpdateUserDto) {
-    return this.usersService.updateProfile(req.user.userId, data);
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  updateProfile(@Body() updateUserDto: UpdateUserDto, @GetUser('userId') userId: number ) {
+    return this.usersService.updateProfile(userId, updateUserDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('organizer')
-  upgradeToOrganizer(@Req() req: any, @Body() orgData: any) {
-    return this.usersService.upgradeToOrganizer(req.user.userId, orgData);
+  @UsePipes(new ValidationPipe({whitelist:true, transform:true}))
+  upgradeToOrganizer(@GetUser('userId') userId: number, @Body() orgData: CreateOrganizerProfileDto) {
+    return this.usersService.upgradeToOrganizer(userId, orgData);
   }
 }

@@ -21,15 +21,23 @@ export class UsersService {
 
 
 
-    async create(createUserDto: CreateUserDto) {
-        const { password, ...userDto } = createUserDto;
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = this.userRepository.create({ ...userDto, password: hashedPassword });
+    async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+        try {
+            const { password, ...userDto } = createUserDto;
+            const hashedPassword = await bcrypt.hash(password, 10);
 
-        return await this.userRepository.save(user);
+            
+            const user = this.userRepository.create({ ...userDto, password: hashedPassword });
+
+            const savedUser = await this.userRepository.save(user);
+            return this.toResponse(savedUser)
+        } catch (error) {
+            throw error
+        }
     }
 
-    async findByEmail(email: string) {
+    async findByEmail(email: string): Promise<User | null> {
+        if (!email) return null
         const user = await this.userRepository.findOne(
             {
                 where: {
@@ -42,15 +50,15 @@ export class UsersService {
     }
 
 
-    async updateHashedRefreshToken(userId: number, refreshToken: string | null) {
-        if (refreshToken)
-            // const hashed = await bcrypt.hash(refreshToken, 10);
-            await this.userRepository.update(userId, { refreshTokenHash: refreshToken });
-        await this.userRepository.update(userId, {refreshTokenHash: refreshToken})
+    async updateHashedRefreshToken(userId: number, refreshToken: string | null): Promise<void> {
+        if (!userId) throw new BadRequestException('Invalid user ID');
+        await this.userRepository.update(userId, { refreshTokenHash: refreshToken });
     }
 
 
-    async findOne(id: number) {
+    async findOne(id: number): Promise<User> {
+        if (!id) throw new BadRequestException('Invalid User ID')
+
         const user = await this.userRepository.findOne(
             { where: { id } }
         )
@@ -93,33 +101,56 @@ export class UsersService {
 
 
     async getProfile(userId: number): Promise<UserResponseDto> {
+        if (!userId) throw new BadRequestException('Invalid user ID');
+
         const user = await this.userRepository.findOne({
             where: { id: userId },
             relations: ['organizerProfile'],
         });
+
         if (!user) throw new NotFoundException('User not found');
         return this.toResponse(user);
+
     }
 
     async updateProfile(userId: number, dto: UpdateUserDto): Promise<UserResponseDto> {
+        if (!userId) throw new BadRequestException('Invalid user ID');
+        if (!dto || !dto.name) throw new BadRequestException('Name is required');
+
         const user = await this.userRepository.findOne({ where: { id: userId } });
         if (!user) throw new NotFoundException('User not found');
 
-        if (dto.name) user.name = dto.name;
+        user.name = dto.name;
         await this.userRepository.save(user);
+
         return this.getProfile(userId);
     }
 
     async upgradeToOrganizer(userId: number, dto: CreateOrganizerProfileDto): Promise<UserResponseDto> {
-        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (!userId) throw new BadRequestException('Invalid user ID');
+        if (!dto) throw new BadRequestException('Profile data is required');
+
+        const user = await this.userRepository.findOne({
+            where: { id: userId },
+            relations: ['organizerProfile']
+        });
+
         if (!user) throw new NotFoundException('User not found');
-        if (user.role === UserRole.ORGANIZER) throw new BadRequestException('Already an organizer');
+        if (user.role === UserRole.ORGANIZER) {
+            throw new BadRequestException('Already an organizer');
+        }
 
-        await this.orgRepo.save(this.orgRepo.create({ ...dto, user }));
-        user.role = UserRole.ORGANIZER;
-        await this.userRepository.save(user);
+        try {
+            const profile = this.orgRepo.create({ ...dto, user });
+            await this.orgRepo.save(profile);
 
-        return this.getProfile(userId);
+            user.role = UserRole.ORGANIZER;
+            await this.userRepository.save(user);
+
+            return this.getProfile(userId);
+        } catch (error) {
+            throw new BadRequestException('Failed to create organizer profile');
+        }
     }
 
     private toResponse(user: User): UserResponseDto {

@@ -1,4 +1,6 @@
-import { IsEmail, IsString } from 'class-validator';
+import { IsEmail, IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
+import { UserRole } from 'src/entities/user.entity';
+import { CreateOrganizerProfileDto } from './user.dto';
 export class CreateUserDto {
   @IsString()
   name: string;
@@ -9,4 +11,12 @@ export class CreateUserDto {
 
   @IsString()
   password: string;
+
+  @IsOptional()
+  @IsEnum(UserRole)
+  role?: UserRole
+
+  @IsOptional()
+  @IsObject()
+  organizerProfile?: CreateOrganizerProfileDto
 }
