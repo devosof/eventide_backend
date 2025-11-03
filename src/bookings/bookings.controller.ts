@@ -43,4 +43,6 @@ export class BookingsController {
   getEventBookings(@Param('eventId', ParseIntPipe) eventId: number, @GetUser('userId') userId: number) {
     return this.bookingsService.getEventBookings(eventId, userId);
   }
+
+
 }

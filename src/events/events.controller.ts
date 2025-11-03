@@ -19,7 +19,14 @@ export class EventsController {
   }
 
   @Get()
-  findAll(@Query() dto: FindEventsDto) {
+  findAll(@Query() dto: FindEventsDto): 
+  Promise<{ 
+    items: EventResponseDto[]; 
+    total: number; 
+    page: number; 
+    limit: number; 
+    pages: number; 
+  }> {
     return this.eventsService.findAll(dto);
   }
 

@@ -9,6 +9,7 @@ import { Ticket } from '../entities/ticket.entity';
 import { Category } from '../entities/category.entity';
 import { User } from '../entities/user.entity';
 import { APP_PIPE } from '@nestjs/core';
+import { Booking } from 'src/entities/booking.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { APP_PIPE } from '@nestjs/core';
       Ticket,
       Category,
       User,
+      Booking,
     ]),
 
     

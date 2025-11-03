@@ -45,6 +45,8 @@ export class UpdateEventDto {
   @IsOptional() @ValidateNested() @Type(() => LocationDto) location?: LocationDto;
   @IsOptional() @IsArray() @IsString({ each: true }) imageUrls?: string[];
   @IsOptional() @IsArray() @IsNumber({}, { each: true }) categoryIds?: number[];
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => TicketDto) tickets: TicketDto[];
+
 }
 
 // Query

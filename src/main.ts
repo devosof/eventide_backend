@@ -7,11 +7,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
 
-  app.use(cookieParser());
+ 
   app.enableCors({
-    origin: '*', // your frontend URL
+    origin: 'http://localhost:5174', // your frontend URL
     credentials: true, // needed for cookies
   });
+   app.use(cookieParser());
 
 
   // Swagger Configuration
@@ -19,6 +20,7 @@ async function bootstrap() {
     .setTitle("Eventide API")
     .setDescription("API for the eventide event management platform")
     .setVersion('1.0')
+    .addBearerAuth()
     .build()
 
   const document = SwaggerModule.createDocument(app, config)
@@ -35,5 +37,7 @@ async function bootstrap() {
   // );
   await app.listen(3000);
   // console.log(process.env.DATABASE_URL);
+  console.log(`Server running on localhost:3000`)
+  console.log("Swagger docs available at localhost:3000/api")
 }
 bootstrap();

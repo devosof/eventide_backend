@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
-import { User } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { UsersService } from 'src/users/users.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
@@ -23,11 +23,11 @@ export class AuthService {
     ) { }
 
 
-    private async hash(data: string){
+    private async hash(data: string) {
         const rounds = 10
         return await bcrypt.hash(data, rounds)
     }
-    
+
     private async compare(data: string, hash: string) {
         return bcrypt.compare(data, hash);
     }
@@ -46,16 +46,16 @@ export class AuthService {
     }
 
     // for signup
-    async register(createUserDto: CreateUserDto) {
-        const exists = await this.usersService.findByEmail(createUserDto?.email);
-        if (exists) throw new ForbiddenException('Email already used');
-        const user = await this.usersService.create(createUserDto)
-        console.log("User ", user);
-        return {
-            user: user
-        }
-    }
-
+async register(createUserDto: CreateUserDto) {
+    const exists = await this.usersService.findByEmail(createUserDto?.email);
+    if (exists) throw new ForbiddenException('Email already used');
+    
+    // Create base user first
+    const user = await this.usersService.create(createUserDto);
+    
+    // If organizer profile data is provided, upgrade the user    
+    return { user };
+}
     // for using local strategy
     async validateLocalUser(email: string, password: string) {
         const user = await this.usersService.findByEmail(email);
@@ -122,6 +122,6 @@ export class AuthService {
         });
     }
 
-    
+
 
 }

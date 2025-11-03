@@ -16,6 +16,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth/jwt-auth.guard';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -23,7 +24,7 @@ export class AuthController {
 
     @Post('register')
     @UsePipes(new ValidationPipe({ whitelist: true }))
-    async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+    async register(@Body() dto: CreateUserDto, @Res({ passthrough: true }) res: Response) {
         const { user } = await this.authService.register(dto);
         // this.setRefreshCookie(res, refreshToken);
         return { user };
@@ -53,7 +54,12 @@ export class AuthController {
     async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
         await this.authService.logout(req.user.userId);
         console.log(req.user)
-        res.clearCookie('refreshToken');
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'lax',
+            path:'/'
+        });
         console.log('headers:', req.headers);
         console.log('cookies:', req.cookies);
 
@@ -72,7 +78,7 @@ export class AuthController {
         res.cookie('refreshToken', token, {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? 'strict': 'lax',
+            sameSite: isProd ? 'none': 'lax',
             path: '/',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });

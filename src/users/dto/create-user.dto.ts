@@ -13,10 +13,11 @@ export class CreateUserDto {
   password: string;
 
   @IsOptional()
+  organizerProfile?: CreateOrganizerProfileDto
+
+  @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole
 
-  @IsOptional()
-  @IsObject()
-  organizerProfile?: CreateOrganizerProfileDto
+  
 }
