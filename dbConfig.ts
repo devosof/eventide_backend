@@ -28,4 +28,7 @@ export const pgConfig: PostgresConnectionOptions = {
         Booking
     ],
     synchronize: true, // this is only for development env (set to false for production)
+    ssl: {
+    rejectUnauthorized: false,
+  },
 }
