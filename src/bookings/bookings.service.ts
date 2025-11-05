@@ -14,7 +14,7 @@ export class BookingsService {
     @InjectRepository(Event) private eventRepo: Repository<Event>,
     @InjectRepository(Ticket) private ticketRepo: Repository<Ticket>,
     @InjectRepository(User) private userRepo: Repository<User>,
-  ) {}
+  ) { }
 
   async create(dto: CreateBookingDto, userId: number): Promise<BookingResponseDto> {
     const user = await this.userRepo.findOne({ where: { id: userId } });
@@ -25,6 +25,27 @@ export class BookingsService {
 
     const ticket = await this.ticketRepo.findOne({ where: { id: dto.ticketId } });
     if (!ticket) throw new NotFoundException('Ticket not found');
+    
+    // Check if event has already ended
+    const now = new Date();
+    if (new Date(event.endDate) < now) {
+      throw new BadRequestException('Cannot book a ticket for an event that has already ended');
+    }
+
+    if (new Date(ticket.salesStartDate) > now){
+      throw new BadRequestException('Ticket sales have not started yet')
+    } else if (new Date(ticket.salesEndDate) < now) {
+      throw new BadRequestException('Ticket sales have already ended')
+    }
+
+    if (event.bookings.length === event.capacity){
+      throw new ForbiddenException('Event Bookings are full')
+    }
+    // Optional: check if event booking period has started
+    // if (new Date(event.startDate) > now) {
+    //   // this condition is optional — uncomment if you want to allow booking only after start
+    //   // throw new BadRequestException('Booking not open yet for this event');
+    // }
 
     const existing = await this.bookingRepo.findOne({
       where: { user: { id: userId }, event: { id: dto.eventId } },
@@ -34,6 +55,9 @@ export class BookingsService {
     const booking = await this.bookingRepo.save(
       this.bookingRepo.create({ user, event, ticket, status: 'CONFIRMED' })
     );
+
+    // TODO: Use this to decrease the quantity of the tickets on booking
+    // const ticketToBook = event?.tickets?.find((t) => t.id == ticket.id )
 
     return this.findOne(booking.id, userId);
   }
@@ -45,6 +69,7 @@ export class BookingsService {
       .leftJoinAndSelect('event.location', 'location')
       .leftJoinAndSelect('event.images', 'images')
       .leftJoinAndSelect('booking.ticket', 'ticket')
+      .leftJoinAndSelect('booking.user', 'user')
       .where('booking.user.id = :userId', { userId });
 
     if (status) query.andWhere('booking.status = :status', { status });
@@ -54,6 +79,8 @@ export class BookingsService {
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();
+
+    console.log("My bookings: ", items)
 
     return {
       items: items.map(b => this.toResponse(b)),
@@ -123,6 +150,7 @@ export class BookingsService {
         id: booking.event.id,
         name: booking.event.name,
         startDate: booking.event.startDate,
+        endDate: booking.event.endDate,
         city: booking.event.location.city,
         images: booking.event.images?.map(i => ({ id: i.id, imageUrl: i.imageUrl })) || [],
       },

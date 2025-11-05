@@ -17,20 +17,26 @@ export class BookingsController {
     return this.bookingsService.create(dto, userId);
   }
 
+  
   @Get('my-bookings')
   findMyBookings(@Query() dto: FindBookingsDto, @GetUser('userId') userId: number) {
+    
     return this.bookingsService.findMyBookings(userId, dto);
   }
+
+
 
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number): Promise<BookingResponseDto> {
     return this.bookingsService.findOne(id, userId);
   }
 
+
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBookingDto, @GetUser('userId') userId: number): Promise<BookingResponseDto> {
     return this.bookingsService.update(id, dto, userId);
   }
+
 
   @Delete(':id')
   cancel(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number): Promise<void> {
@@ -44,5 +50,7 @@ export class BookingsController {
     return this.bookingsService.getEventBookings(eventId, userId);
   }
 
+
+  
 
 }

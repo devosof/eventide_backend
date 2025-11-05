@@ -37,6 +37,16 @@ export class EventsController {
     return this.eventsService.getMyEvents(userId);
   }
 
+
+  @Get('organizer-stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.ORGANIZER)
+  getOrganizerStats(@GetUser('userId') userId:number){
+    console.log("user id", userId)
+    return this.eventsService.getOrganizerStats(userId)
+  }
+
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number): Promise<EventResponseDto> {
     return this.eventsService.findOne(id);
@@ -55,4 +65,7 @@ export class EventsController {
   remove(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number): Promise<void> {
     return this.eventsService.remove(id, userId);
   }
+
+
+
 }

@@ -25,6 +25,7 @@ export class BookingResponseDto {
     id: number;
     name: string;
     startDate: Date;
+    endDate: Date;
     city: string;
     images: { id: number; imageUrl: string }[];
   };

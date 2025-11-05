@@ -247,7 +247,8 @@ export class EventsService {
       .leftJoinAndSelect('event.organizer', 'organizer')
       .leftJoinAndSelect('event.location', 'location')
       .leftJoinAndSelect('event.images', 'images')
-      .leftJoinAndSelect('event.categories', 'categories');
+      .leftJoinAndSelect('event.categories', 'categories')
+      .leftJoinAndSelect('event.tickets', 'tickets');
 
     if (search) {
       query.andWhere('(event.name ILIKE :search OR event.description ILIKE :search)', 
@@ -289,9 +290,10 @@ export class EventsService {
 
     const event = await this.eventRepo.findOne({
       where: { id },
-      relations: ['organizer', 'organizer.organizerProfile', 'location', 'images', 'tickets', 'categories'],
+      relations: ['organizer', 'organizer.organizerProfile', 'location', 'images', 'tickets', 'categories', 'bookings'],
     });
     
+
     if (!event) throw new NotFoundException('Event not found');
     return this.toResponse(event);
   }
@@ -573,6 +575,7 @@ export class EventsService {
       images: event.images?.map(i => ({ id: i.id, imageUrl: i.imageUrl })) || [],
       tickets: event.tickets?.map(t => ({ id: t.id, name: t.name, price: t.price, salesStartDate: t.salesStartDate, salesEndDate: t.salesEndDate })) || [],
       categories: event.categories?.map(c => ({ id: c.id, name: c.name })) || [],
+      bookings: event.bookings?.length | 0,
       createdAt: event.createdAt,
     };
   }

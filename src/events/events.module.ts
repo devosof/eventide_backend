@@ -29,7 +29,11 @@ import { Booking } from 'src/entities/booking.entity';
   providers: [EventsService,
     {
       provide: APP_PIPE,
-      useClass: ValidationPipe
+      useValue: new ValidationPipe({
+        whitelist: true,
+        transform: true
+      }),
+
     }
   ],
   exports: [EventsService],

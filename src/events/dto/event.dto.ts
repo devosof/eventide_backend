@@ -81,6 +81,7 @@ export class EventResponseDto {
   location: LocationDto & { id: number };
   images: { id: number; imageUrl: string }[];
   tickets: { id: number; name: string; price: number; salesStartDate: Date; salesEndDate: Date }[];
+  bookings?: number
   categories: { id: number; name: string }[];
   createdAt: Date;
 }
