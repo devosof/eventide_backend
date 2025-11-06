@@ -10,6 +10,7 @@ import { Category } from '../entities/category.entity';
 import { User } from '../entities/user.entity';
 import { APP_PIPE } from '@nestjs/core';
 import { Booking } from 'src/entities/booking.entity';
+import { UploadService } from 'src/upload/upload.service';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { Booking } from 'src/entities/booking.entity';
     
   ],
   controllers: [EventsController],
-  providers: [EventsService,
+  providers: [EventsService, UploadService,
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({

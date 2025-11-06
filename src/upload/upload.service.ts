@@ -15,7 +15,7 @@ export class UploadService {
     return { file, imageUrl: imageUrl };
   }
 
-  manyFiles(files: Express.Multer.File[]) {
+  uploadMany(files: Express.Multer.File[]) {
     if (!files || !Array.isArray(files)) {
       throw new BadRequestException('File(s) not found');
     }
@@ -26,7 +26,7 @@ export class UploadService {
         uploadedFiles.push(url)
     }
 
-    return {uploadedFiles}
+    return uploadedFiles
 
   }
 

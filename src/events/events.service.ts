@@ -9,6 +9,7 @@ import { Category } from '../entities/category.entity';
 import { User, UserRole } from '../entities/user.entity';
 import { CreateEventDto, UpdateEventDto, FindEventsDto, EventResponseDto } from './dto/event.dto';
 import { Booking } from 'src/entities/booking.entity';
+import { UploadService } from 'src/upload/upload.service';
 
 @Injectable()
 export class EventsService {
@@ -20,6 +21,7 @@ export class EventsService {
     @InjectRepository(Booking) private bookingRepo: Repository<Booking>,
     @InjectRepository(Category) private categoryRepo: Repository<Category>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    private readonly uploadService: UploadService,
   ) {}
 
   // async create(dto: CreateEventDto, userId: number): Promise<EventResponseDto> {
@@ -111,9 +113,10 @@ export class EventsService {
   //     throw new BadRequestException('Failed to create event');
   //   }
   // }
-  async create(dto: CreateEventDto, userId: number): Promise<EventResponseDto> {
+  async create(dto: CreateEventDto, userId: number, files?: Express.Multer.File[]): Promise<EventResponseDto> {
     if (!userId) throw new BadRequestException('Invalid user ID');
     if (!dto) throw new BadRequestException('Event data is required');
+    if (!files) throw new BadRequestException('Files not Found')
 
     const organizer = await this.userRepo.findOne({ 
       where: { id: userId },
@@ -159,6 +162,7 @@ export class EventsService {
 
     try {
       const location = await this.locationRepo.save(this.locationRepo.create(dto.location));
+
       
       let categories: Category[] = [];
       if (dto.categoryIds && dto.categoryIds.length > 0) {
@@ -180,6 +184,11 @@ export class EventsService {
           categories,
         })
       );
+
+      if(files){
+        const uploadedFiles = this.uploadService.uploadMany(files);
+        dto.imageUrls = uploadedFiles
+      }
 
       if (dto.imageUrls && dto.imageUrls.length > 0) {
         const images = dto.imageUrls.map(url => this.imageRepo.create({ imageUrl: url, event }));
